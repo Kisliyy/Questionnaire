@@ -1,15 +1,12 @@
 package com.kiselev.questionnaire.controller;
 
-import com.kiselev.questionnaire.dto.AnswerDTO;
 import com.kiselev.questionnaire.dto.QuestionnaireDTO;
-import com.kiselev.questionnaire.dto.QuestionnaireOfUserDTO;
+import com.kiselev.questionnaire.dto.creation.QuestionnaireCreationDTO;
 import com.kiselev.questionnaire.service.QuestionnaireService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/questionnaire")
@@ -18,37 +15,32 @@ public class QuestionnaireController {
     @Autowired
     private QuestionnaireService questionnaireService;
 
-
-    /**
-     * Метод плоучения всех опросов
+    /*
+     * Создание нового опросника
      */
-    @GetMapping
-    public ResponseEntity<List<QuestionnaireDTO>> getAll() {
-        final List<QuestionnaireDTO> all = questionnaireService.getCollect();
-        if (all.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        return new ResponseEntity<>(all, HttpStatus.OK);
+    @PostMapping("/new")
+    public ResponseEntity<QuestionnaireDTO> create(@RequestBody QuestionnaireCreationDTO questionnaireDTO) {
+        QuestionnaireDTO response = questionnaireService.create(questionnaireDTO);
+        return ResponseEntity.ok(response);
     }
 
-    /**
-     * Отправить опросник с ответами
+    /*
+     * Изменение опросника
      */
-    @PostMapping("/{id}")
-    public ResponseEntity<?> saveQuestionnaireWithAnswer(@CookieValue("JSESSIONID") String userId,
-                                                         @PathVariable(name = "id") Long questionnaireId,
-                                                         @RequestBody AnswerDTO answer) {
-        questionnaireService.saveAnswer(userId, questionnaireId, answer);
-        return ResponseEntity.ok().build();
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(@PathVariable(name = "id") Long questionnaireId,
+                                    @RequestBody QuestionnaireDTO updateQuestionnaireDTO) {
+        QuestionnaireDTO response = questionnaireService.update(questionnaireId, updateQuestionnaireDTO);
+        return ResponseEntity.ok(response);
     }
 
-
-    /**
-     * Получить опросы с моими ответами
-     */
-    @GetMapping("/userQuestionnaire")
-    public ResponseEntity<List<QuestionnaireOfUserDTO>> getQuestionnaireWithAnswer(@CookieValue("JSESSIONID") String userId) {
-        List<QuestionnaireOfUserDTO> questionnaireDTO = questionnaireService.getQuestionnaireDTOWithAnswer(userId);
-        return ResponseEntity.ok(questionnaireDTO);
+    /*
+     * Удаление опросника
+     * */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> delete(@PathVariable(name = "id") Long questionnaireId) {
+        questionnaireService.delete(questionnaireId);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
+
 }

@@ -1,0 +1,28 @@
+{
+  "id": 4,
+  "name": "My New Q2",
+  "description": "TEST DESCRIPTION",
+  "dateStart": "2022-02-09T12:13:05.966589+05:00",
+  "dateEnd": "2022-02-09T12:13:05.966589+05:00",
+  "questions": [
+    {
+      "id": 5,
+      "typeQuestion": "MULTIPLY_ANSWER",
+      "questionText": "Text question",
+      "variantList": [
+        {
+          "id": 6,
+          "answer": "A"
+        },
+        {
+          "id": 7,
+          "answer": "B"
+        },
+        {
+          "id": 8,
+          "answer": "C"
+        }
+      ]
+    }
+  ]
+}

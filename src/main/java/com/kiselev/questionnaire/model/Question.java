@@ -29,7 +29,7 @@ public class Question {
     private String questionText;
 
     @Builder.Default
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "question")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AnswerVariant> variantList = new ArrayList<>();
 
     @Builder.Default

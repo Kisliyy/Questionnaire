@@ -1,14 +1,12 @@
 package com.kiselev.questionnaire.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import javax.persistence.*;
 
 @Data
 @Entity
+@Builder
 @Table(name = "answer_variant")
 @NoArgsConstructor
 @AllArgsConstructor

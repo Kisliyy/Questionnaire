@@ -12,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @Table(name = "questionnaire")
 @Entity
+@Builder
 @EqualsAndHashCode(of = "id")
 @ToString(exclude = {"answeredUsers", "questions"})
 public class Questionnaire {
@@ -31,7 +32,7 @@ public class Questionnaire {
     @ManyToMany(mappedBy = "questionnaire")
     private List<User> answeredUsers = new ArrayList<>();
 
-    @OneToMany(mappedBy = "questionnaire", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "questionnaire", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Question> questions = new ArrayList<>();
 
 }
