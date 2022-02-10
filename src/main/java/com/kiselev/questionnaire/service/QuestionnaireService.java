@@ -148,14 +148,17 @@ public class QuestionnaireService {
     @Transactional
     public QuestionnaireDTO update(Long questionnaireId, QuestionnaireDTO updateQuestionnaireDTO) {
         if (questionnaireRepository.existsById(questionnaireId)) {
-            //TODO: просетить поля
+
             Questionnaire questionnaire = questionnaireRepository.getById(questionnaireId);
             questionnaire.setDescription(updateQuestionnaireDTO.getDescription());
             questionnaire.setName(updateQuestionnaireDTO.getName());
             questionnaire.setDateStart(updateQuestionnaireDTO.getDateStart());
             questionnaire.setDateEnd(updateQuestionnaireDTO.getDateEnd());
-            questionnaire.setQuestions(questionService.updateQuestions(questionnaire, updateQuestionnaireDTO.getQuestions()));
+            if (questionnaire.getDateStart() == null) {
+                questionnaire.setQuestions(questionService.updateQuestions(questionnaire, updateQuestionnaireDTO.getQuestions()));
+            }
             questionnaireRepository.save(questionnaire);
+
             return questionnaireToDTO.toDto(questionnaire);
         }
         return updateQuestionnaireDTO;

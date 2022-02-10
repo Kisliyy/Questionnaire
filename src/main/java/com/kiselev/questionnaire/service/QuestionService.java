@@ -6,6 +6,7 @@ import com.kiselev.questionnaire.model.Question;
 import com.kiselev.questionnaire.model.Questionnaire;
 import com.kiselev.questionnaire.repository.AnswerVariantRepository;
 import com.kiselev.questionnaire.repository.QuestionRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class QuestionService {
 
@@ -34,9 +36,10 @@ public class QuestionService {
                 .collect(Collectors.toMap(QuestionDTO::getId, q -> q));
 
         //Удаление неиспользуемых вопросов
-        removeQuestion(existingQuestions, questionsIdList);
+        existingQuestions.removeIf(q -> !questionsIdList.containsKey(q.getId()));
+
         //обновление существующих вопросов
-        updateQuestions(existingQuestions, questionsIdList);
+        existingQuestions = updateQuestions(existingQuestions, questionsIdList);
         //создание новых вопросов
         List<Question> questionList = create(questions, questionnaire);
         //Добавление новых вопросов в опросник
@@ -46,19 +49,16 @@ public class QuestionService {
         return existingQuestions;
     }
 
-    private void removeQuestion(List<Question> existingQuestions, Map<Long, QuestionDTO> questionsIdList) {
-        existingQuestions.removeIf(q -> !questionsIdList.containsKey(q.getId()));
-    }
 
-    private void updateQuestions(List<Question> existingQuestions, Map<Long, QuestionDTO> questionsIdList) {
-        existingQuestions.stream()
+    private List<Question> updateQuestions(List<Question> existingQuestions, Map<Long, QuestionDTO> questionsIdList) {
+        return existingQuestions.stream()
                 .filter(q -> questionsIdList.containsKey(q.getId()))
                 .peek(q -> {
                     QuestionDTO updateQuestion = questionsIdList.get(q.getId());
                     q.setQuestionText(updateQuestion.getQuestionText());
                     q.setTypeQuestion(updateQuestion.getTypeQuestion());
                     q.setVariantList(answerVariantService.updateAnswerVariant(q, updateQuestion.getVariantList()));
-                });
+                }).collect(Collectors.toList());
     }
 
     private List<Question> create(List<QuestionDTO> questions, Questionnaire questionnaire) {
