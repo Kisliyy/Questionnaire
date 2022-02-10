@@ -7,13 +7,13 @@ import com.kiselev.questionnaire.repository.AnswerRepository;
 import com.kiselev.questionnaire.repository.AnswerVariantRepository;
 import com.kiselev.questionnaire.repository.QuestionRepository;
 import com.kiselev.questionnaire.repository.QuestionnaireRepository;
+import com.kiselev.questionnaire.service.dto.QuestionnaireToDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -30,15 +30,15 @@ public class QuestionnaireService {
     private AnswerRepository answerRepository;
     @Autowired
     private AnswerVariantRepository answerVariantRepository;
+    @Autowired
+    private QuestionService questionService;
+    @Autowired
+    private QuestionnaireToDTO questionnaireToDTO;
 
-    public Questionnaire getQuestionnaire(Long id) {
-        return questionnaireRepository.findByIdOrThrow(id);
-    }
 
     public List<Questionnaire> getAll() {
         return questionnaireRepository.findAll();
     }
-
 
     @Transactional
     public void saveAnswer(String userId, Long questionnaireId, AnswerDTO answerDTO) {
@@ -105,7 +105,7 @@ public class QuestionnaireService {
     @Transactional(readOnly = true)
     public List<QuestionnaireDTO> getCollect() {
         return getAll().stream()
-                .map(this::toDto)
+                .map(qd -> questionnaireToDTO.toDto(qd))
                 .collect(Collectors.toList());
     }
 
@@ -141,27 +141,9 @@ public class QuestionnaireService {
                 })
                 .collect(Collectors.toList());
         questionnaire.setQuestions(questions);
-        return toDto(questionnaire);
+        return questionnaireToDTO.toDto(questionnaire);
     }
 
-    private QuestionnaireDTO toDto(Questionnaire questionnaire) {
-        return new QuestionnaireDTO(
-                questionnaire.getId(),
-                questionnaire.getName(),
-                questionnaire.getDescription(),
-                questionnaire.getDateStart(),
-                questionnaire.getDateEnd(),
-                questionnaire.getQuestions().stream().map(qs -> new QuestionDTO(
-                        qs.getId(),
-                        qs.getTypeQuestion(),
-                        qs.getQuestionText(),
-                        qs.getVariantList().stream().map(v -> new AnswerVariantDTO(
-                                v.getId(),
-                                v.getData()
-                        )).collect(Collectors.toList())
-                )).collect(Collectors.toList())
-        );
-    }
 
     @Transactional
     public QuestionnaireDTO update(Long questionnaireId, QuestionnaireDTO updateQuestionnaireDTO) {
@@ -172,88 +154,11 @@ public class QuestionnaireService {
             questionnaire.setName(updateQuestionnaireDTO.getName());
             questionnaire.setDateStart(updateQuestionnaireDTO.getDateStart());
             questionnaire.setDateEnd(updateQuestionnaireDTO.getDateEnd());
-            questionnaire.setQuestions(updateQuestions(questionnaire, updateQuestionnaireDTO.getQuestions()));
+            questionnaire.setQuestions(questionService.updateQuestions(questionnaire, updateQuestionnaireDTO.getQuestions()));
             questionnaireRepository.save(questionnaire);
-            return toDto(questionnaire);
+            return questionnaireToDTO.toDto(questionnaire);
         }
         return updateQuestionnaireDTO;
-    }
-
-    private List<Question> updateQuestions(Questionnaire questionnaire, List<QuestionDTO> questions) {
-        List<Question> existingQuestions = questionnaire.getQuestions();
-        Map<Long, QuestionDTO> questionsIdList = questions.stream()
-                .collect(Collectors.toMap(QuestionDTO::getId, q -> q));
-
-        //Удаление
-        existingQuestions.removeIf(q -> !questionsIdList.containsKey(q.getId()));
-
-        //Обновление
-        existingQuestions.stream()
-                .filter(q -> questionsIdList.containsKey(q.getId()))
-                .peek(q -> {
-                    QuestionDTO updateQuestion = questionsIdList.get(q.getId());
-                    q.setQuestionText(updateQuestion.getQuestionText());
-                    q.setTypeQuestion(updateQuestion.getTypeQuestion());
-                    q.setVariantList(updateAnswerVariant(q, updateQuestion.getVariantList()));
-                }).collect(Collectors.toList());
-
-        //Добавление
-        List<Question> questionList = questions.stream()
-                .filter(q -> q.getId() == null)
-                .map(q -> {
-                    Question question = questionRepository.save(Question.builder()
-                            .questionnaire(questionnaire)
-                            .questionText(q.getQuestionText())
-                            .typeQuestion(q.getTypeQuestion())
-                            .build());
-
-                    List<AnswerVariant> answerVariantList = answerVariantRepository.saveAll(
-                            q.getVariantList().stream()
-                                    .map(av -> AnswerVariant.builder()
-                                            .data(av.getAnswer())
-                                            .question(question)
-                                            .build())
-                                    .collect(Collectors.toList()));
-                    question.setVariantList(answerVariantList);
-                    return question;
-                }).collect(Collectors.toList());
-
-        existingQuestions.addAll(questionList);
-        questionnaire.setQuestions(existingQuestions);
-        return existingQuestions;
-    }
-
-
-    private List<AnswerVariant> updateAnswerVariant(Question q, List<AnswerVariantDTO> variantList) {
-        List<AnswerVariant> existingQuestioningAnswerVariants = q.getVariantList();
-        Map<Long, AnswerVariantDTO> answerIdList = variantList
-                .stream()
-                .collect(Collectors.toMap(AnswerVariantDTO::getId, aw -> aw));
-
-        //удаление ненужных вариантов ответов
-        existingQuestioningAnswerVariants.removeIf(av -> !answerIdList.containsKey(av.getId()));
-
-        //обновление вариантов ответа
-        existingQuestioningAnswerVariants.stream()
-                .filter(av -> answerIdList.containsKey(av.getId()))
-                .peek(av -> {
-                    AnswerVariantDTO answerVariantDTO = answerIdList.get(av.getId());
-                    av.setData(answerVariantDTO.getAnswer());
-                    av.setQuestion(q);
-                }).collect(Collectors.toList());
-
-        //добавление новых вариантов ответа
-        List<AnswerVariant> newAnswerVariant = existingQuestioningAnswerVariants.stream()
-                .filter(av -> av.getId() == null)
-                .peek(av -> {
-                    AnswerVariantDTO answerVariantDTO = answerIdList.get(null);
-                    AnswerVariant.builder()
-                            .data(answerVariantDTO.getAnswer())
-                            .question(q);
-                }).collect(Collectors.toList());
-        existingQuestioningAnswerVariants.addAll(newAnswerVariant);
-
-        return answerVariantRepository.saveAll(existingQuestioningAnswerVariants);
     }
 
     public void delete(Long questionnaireId) {

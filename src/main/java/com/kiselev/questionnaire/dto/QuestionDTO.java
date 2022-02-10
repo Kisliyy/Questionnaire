@@ -25,5 +25,4 @@ public class QuestionDTO implements Serializable {
 
     @JsonProperty("variantList")
     private List<AnswerVariantDTO> variantList;
-
 }
